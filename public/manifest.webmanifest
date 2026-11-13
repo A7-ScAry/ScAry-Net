@@ -1,0 +1,24 @@
+{
+  "name": "ScAry Net",
+  "short_name": "ScAry Net",
+  "description": "Text-only conversations, made simple.",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "background_color": "#051424",
+  "theme_color": "#051424",
+  "icons": [
+    {
+      "src": "/icons/icon-192.png?v=borderless-20261114",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/icons/icon-512.png?v=borderless-20261114",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any"
+    }
+  ]
+}

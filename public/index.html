@@ -1,0 +1,160 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <meta name="theme-color" content="#061321" />
+  <meta name="description" content="ScAry Net — a simple place to connect. Private, text-only messaging by username." />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <meta name="apple-mobile-web-app-title" content="ScAry Net" />
+  <link rel="manifest" href="./manifest.webmanifest?v=email-original-layout-20261114" />
+  <link rel="icon" type="image/png" sizes="32x32" href="./icons/icon-32.png?v=email-original-layout-20261114" />
+  <link rel="apple-touch-icon" href="./icons/icon-180.png?v=email-original-layout-20261114" />
+  <link rel="stylesheet" href="./style.css?v=email-original-layout-20261114" />
+  <title>ScAry Net — Just text. Real connections.</title>
+  <script src="./app.js?v=email-original-layout-20261114" defer></script>
+</head>
+<body>
+  <div class="noise" aria-hidden="true"></div>
+
+  <!-- Welcome and sign-in -->
+  <div id="authScreen" class="auth-screen">
+    <div class="auth-art" aria-hidden="true">
+      <img class="hero-brand" src="./assets/scary-net-logo.png" alt="" />
+      <div class="art-overline"><span class="status-dash"></span> A QUIETER PLACE TO CONNECT</div>
+      <h1>Words bring<br /><em>us closer.</em></h1>
+      <p>A personal space for conversations that matter. Find your people, say what you feel, and keep in touch.</p>
+      <div class="float-msg float-one"><span class="float-avatar">S</span> Hey, you around? <span>✓</span></div>
+      <div class="float-msg float-two">Always here. <span>✓✓</span></div>
+      <div class="art-foot">S C A R Y  N E T <span>·</span> JUST WORDS. JUST US.</div>
+    </div>
+    <section class="auth-panel" aria-labelledby="authTitle">
+      <div class="mobile-logo"><img class="logo-icon" src="./assets/scary-net-logo.png" alt="" /><strong>Sc<span class="brand-a">A</span>ry Net</strong></div>
+      <span class="eyebrow">WELCOME TO SCARY NET</span>
+      <h2 id="authTitle">Welcome back<span class="green-dot">.</span></h2>
+      <p id="authSubtitle" class="subcopy">Pick up where the conversation left off.</p>
+      <div class="auth-switch" role="group" aria-label="Account action">
+        <button id="loginTab" type="button" class="auth-tab active" aria-pressed="true">Log in</button>
+        <button id="registerTab" type="button" class="auth-tab" aria-pressed="false">Create account</button>
+      </div>
+      <form id="authForm" class="auth-form">
+        <label for="usernameInput">USERNAME</label>
+        <div class="field-wrap"><span aria-hidden="true">@</span><input id="usernameInput" autocomplete="username" placeholder="your_username" maxlength="20" minlength="3" pattern="[a-z0-9_]{3,20}" title="Use 3–20 lowercase letters, numbers or underscores" required spellcheck="false" autocapitalize="none" /></div>
+        <p id="usernameHint" class="field-hint hidden">3–20 characters: lowercase letters, numbers and underscores only.</p>
+        <div id="registerEmailField" class="register-email hidden">
+          <label for="emailInput">EMAIL</label>
+          <div class="field-wrap"><span aria-hidden="true">✉</span><input id="emailInput" type="email" maxlength="254" autocomplete="email" placeholder="you@example.com" /></div>
+          <p class="field-hint">We'll send an 8-digit code to verify your email.</p>
+        </div>
+        <label for="passwordInput">PASSWORD</label>
+        <div class="field-wrap"><span aria-hidden="true">✳</span><input id="passwordInput" type="password" autocomplete="current-password" placeholder="Your password" minlength="8" maxlength="72" required /><button type="button" id="passwordToggle" class="eye-button" aria-label="Show password">Show</button></div>
+        <p id="passwordHint" class="field-hint hidden">Use 8–25 characters. Your verified email lets you recover your account.</p>
+        <button type="button" id="forgotButton" class="text-link">Forgot username or password?</button>
+        <p id="authError" class="form-error hidden" role="alert"></p>
+        <button id="authSubmit" type="submit" class="primary-button">Log in <span aria-hidden="true">→</span></button>
+      </form>
+      <p class="auth-note">No phone number. Email is private and used for account recovery.</p>
+      <div class="auth-footer"><span class="footer-line"></span><span>ScAry Net © 2026</span><span class="footer-line"></span></div>
+    </section>
+  </div>
+
+  <!-- Signed-in messenger -->
+  <div id="appShell" class="app-shell hidden">
+    <aside class="sidebar" aria-label="Chats sidebar">
+      <header class="sidebar-header">
+        <div class="wordmark"><img class="logo-icon" src="./assets/scary-net-logo.png" alt="" /><div><strong>Sc<span class="brand-a">A</span>ry Net</strong><small>Your quiet corner to connect.</small></div></div>
+        <span class="app-pill"><span class="live-dot"></span> TEXT ONLY</span>
+      </header>
+      <div class="inbox-head"><div><span class="eyebrow">YOUR MESSAGES</span><h2>Messages<span class="green-dot">.</span></h2></div><button id="newChatButton" class="new-chat-button" type="button" title="Start a new chat" aria-label="Start a new chat">＋</button></div>
+      <form id="newChatForm" class="new-chat-form hidden">
+        <label for="newChatUsername">START A CONVERSATION</label>
+        <div class="new-chat-entry"><span>@</span><input id="newChatUsername" type="text" maxlength="20" placeholder="Enter exact username" autocomplete="off" spellcheck="false" autocapitalize="none" required /><button type="submit" aria-label="Find user">→</button></div>
+        <p id="newChatError" class="new-chat-error hidden" role="alert"></p>
+      </form>
+      <div id="chatList" class="chat-list" aria-label="Conversations"><div class="chat-list-empty">Your conversations will appear here.</div></div>
+      <div class="sidebar-bottom"><div class="my-avatar" id="myAvatar">S</div><div class="my-profile"><strong id="myUsername">@you</strong><span>Your account</span></div><button id="settingsButton" class="logout-button" type="button" title="Account settings" aria-label="Account settings">⚙</button><button id="logoutButton" class="logout-button" type="button" title="Log out" aria-label="Log out"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><path d="m16 17 5-5-5-5"/><path d="M21 12H9"/></svg></button></div>
+    </aside>
+
+    <main class="chat-pane">
+      <section id="emptyPane" class="empty-pane" aria-label="Select a chat">
+        <div class="empty-orbit"><div class="orbit orbit-one"></div><div class="orbit orbit-two"></div><div class="orbit-center"><img class="empty-logo" src="./assets/scary-net-logo.png" alt="" /></div></div>
+        <span class="eyebrow">A MESSAGE AWAY</span>
+        <h2>Good conversations<br /><em>start here.</em></h2>
+        <p>Find someone by their username, say hello,<br />and let the conversation flow.</p>
+        <button id="emptyNewChat" type="button" class="empty-cta">Start a conversation <span>→</span></button>
+        <div class="empty-bottom">TEXT ONLY <span>•</span> USERNAME CONNECTIONS <span>•</span> MADE FOR EVERY SCREEN</div>
+      </section>
+
+      <section id="conversationPane" class="conversation-pane hidden" aria-label="Chat conversation">
+        <header class="conversation-header"><button id="backButton" type="button" class="back-button" aria-label="Back to chats">←</button><div class="peer-avatar" id="peerAvatar">?</div><div class="peer-info"><strong id="peerUsername">@username</strong><span>Direct message</span></div><div class="header-wordmark">Sc<span class="brand-a">A</span>ry Net</div></header>
+        <div id="messagesViewport" class="messages-viewport" role="log" aria-live="polite" aria-relevant="additions">
+          <div class="messages-inner"><button id="loadOlder" type="button" class="load-older hidden">Load earlier messages ↑</button><div id="messagesList" class="messages-list"></div></div>
+        </div>
+        <form id="sendForm" class="composer"><label for="messageInput" class="sr-only">Your message</label><div class="composer-box"><textarea id="messageInput" placeholder="Write a message..." rows="1" maxlength="1000" enterkeyhint="send"></textarea><span class="composer-length" id="messageLength">0/1000</span><button id="sendButton" type="submit" class="send-button" aria-label="Send message" disabled><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m5 12 14-8-3 16-4-6-7-2Z"/><path d="m12 14 7-10"/></svg></button></div><span class="composer-note">Enter to send <span>•</span> Shift + Enter for a new line</span></form>
+      </section>
+    </main>
+  </div>
+  <!-- Forgot-username / password-reset flow -->
+  <div id="recoveryScreen" class="modal-overlay hidden" role="dialog" aria-modal="true" aria-labelledby="recoverTitle">
+    <section class="account-modal recovery-modal">
+      <div class="modal-heading"><h2 id="recoverTitle">Recover your account</h2><button id="closeRecovery" type="button" class="modal-close" aria-label="Close">×</button></div>
+      <p class="modal-caption">We’ll send your username and a verification code to your verified email address.</p>
+      <form id="recoveryRequestForm" class="account-form">
+        <label for="recoverEmail">EMAIL</label><input type="email" id="recoverEmail" maxlength="254" placeholder="you@example.com" autocomplete="email" required />
+        <button class="primary-button" type="submit">Send recovery code →</button>
+      </form>
+      <form id="recoveryVerifyForm" class="account-form hidden">
+        <p class="modal-caption">Check your inbox. The code expires in 15 minutes. Your username is also in the email.</p>
+        <label for="recoverCode">8-DIGIT CODE</label><input id="recoverCode" inputmode="numeric" pattern="[0-9]{8}" minlength="8" maxlength="8" autocomplete="one-time-code" placeholder="12345678" required />
+        <button class="primary-button" type="submit">Verify code →</button>
+        <button class="text-link" type="button" id="retryRecovery">Use another email</button>
+      </form>
+      <form id="recoveryResetForm" class="account-form hidden">
+        <p class="modal-caption">Account verified: <strong id="recoveredUsername"></strong></p>
+        <label for="recoverNewPassword">NEW PASSWORD (8–25 CHARACTERS)</label><input id="recoverNewPassword" type="password" minlength="8" maxlength="25" autocomplete="new-password" required />
+        <button class="primary-button" type="submit">Reset password →</button>
+      </form>
+      <p id="recoveryFeedback" class="modal-feedback" role="status" aria-live="polite"></p>
+    </section>
+  </div>
+  <!-- Signed-in account settings -->
+  <div id="settingsScreen" class="modal-overlay hidden" role="dialog" aria-modal="true" aria-labelledby="settingsTitle">
+    <section class="account-modal">
+      <div class="modal-heading"><h2 id="settingsTitle">Account settings</h2><button id="closeSettings" type="button" class="modal-close" aria-label="Close">×</button></div>
+      <p class="modal-caption">Change your login details. Conversations and your account stay together.</p>
+      <div class="email-status" id="emailStatus">Loading email status…</div>
+      <details class="settings-section" open><summary>Email</summary>
+        <form id="changeEmailForm" class="account-form">
+          <label for="newEmailInput">NEW EMAIL</label><input id="newEmailInput" type="email" maxlength="254" autocomplete="email" placeholder="you@example.com" required />
+          <label for="emailCurrentPassword">CURRENT PASSWORD</label><input id="emailCurrentPassword" type="password" autocomplete="current-password" required />
+          <button class="mini-button" type="submit">Send code to new email</button>
+        </form>
+        <button type="button" class="text-link" id="resendVerify">Resend code to my current email</button>
+        <form id="verifyEmailForm" class="account-form">
+          <label for="verifyEmailCode">EMAIL VERIFICATION CODE</label><input id="verifyEmailCode" inputmode="numeric" pattern="[0-9]{8}" maxlength="8" placeholder="8-digit code" autocomplete="one-time-code" required />
+          <button class="mini-button" type="submit">Verify email address</button>
+        </form>
+      </details>
+      <details class="settings-section"><summary>Change username</summary>
+        <form id="changeUsernameForm" class="account-form">
+          <label for="updatedUsername">NEW USERNAME</label><input id="updatedUsername" pattern="[a-z0-9_]{3,20}" minlength="3" maxlength="20" placeholder="lowercase_username" autocapitalize="none" spellcheck="false" required />
+          <label for="usernameCurrentPassword">CURRENT PASSWORD</label><input id="usernameCurrentPassword" type="password" autocomplete="current-password" required />
+          <button class="mini-button" type="submit">Change username</button>
+        </form>
+        <p class="modal-caption">Your current password stays the same; sign in with the new username afterward.</p>
+      </details>
+      <details class="settings-section"><summary>Change password</summary>
+        <form id="changePasswordForm" class="account-form">
+          <label for="passwordCurrentPassword">CURRENT PASSWORD</label><input id="passwordCurrentPassword" type="password" autocomplete="current-password" required />
+          <label for="updatedPassword">NEW PASSWORD (8–25 CHARACTERS)</label><input id="updatedPassword" type="password" minlength="8" maxlength="25" autocomplete="new-password" required />
+          <button class="mini-button" type="submit">Change password</button>
+        </form>
+        <p class="modal-caption">Changing your password signs out other devices.</p>
+      </details>
+      <p id="settingsFeedback" class="modal-feedback" role="status" aria-live="polite"></p>
+    </section>
+  </div>
+  <div id="toast" class="toast" role="status" aria-live="polite"></div>
+</body>
+</html>
