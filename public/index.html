@@ -11,9 +11,9 @@
   <link rel="manifest" href="./manifest.webmanifest?v=email-original-layout-20261114" />
   <link rel="icon" type="image/png" sizes="32x32" href="./icons/icon-32.png?v=email-original-layout-20261114" />
   <link rel="apple-touch-icon" href="./icons/icon-180.png?v=email-original-layout-20261114" />
-  <link rel="stylesheet" href="./style.css?v=email-original-layout-20261114" />
+  <link rel="stylesheet" href="./style.css?v=groups-20261114" />
   <title>ScAry Net — Just text. Real connections.</title>
-  <script src="./app.js?v=email-original-layout-20261114" defer></script>
+  <script src="./app.js?v=groups-20261114" defer></script>
 </head>
 <body>
   <div class="noise" aria-hidden="true"></div>
@@ -72,6 +72,7 @@
         <div class="new-chat-entry"><span>@</span><input id="newChatUsername" type="text" maxlength="20" placeholder="Enter exact username" autocomplete="off" spellcheck="false" autocapitalize="none" required /><button type="submit" aria-label="Find user">→</button></div>
         <p id="newChatError" class="new-chat-error hidden" role="alert"></p>
       </form>
+      <button id="createGroupButton" class="create-group-button" type="button"><span aria-hidden="true">＋</span> Create a group</button>
       <div id="chatList" class="chat-list" aria-label="Conversations"><div class="chat-list-empty">Your conversations will appear here.</div></div>
       <div class="sidebar-bottom"><div class="my-avatar" id="myAvatar">S</div><div class="my-profile"><strong id="myUsername">@you</strong><span>Your account</span></div><button id="settingsButton" class="logout-button" type="button" title="Account settings" aria-label="Account settings">⚙</button><button id="logoutButton" class="logout-button" type="button" title="Log out" aria-label="Log out"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><path d="m16 17 5-5-5-5"/><path d="M21 12H9"/></svg></button></div>
     </aside>
@@ -87,7 +88,7 @@
       </section>
 
       <section id="conversationPane" class="conversation-pane hidden" aria-label="Chat conversation">
-        <header class="conversation-header"><button id="backButton" type="button" class="back-button" aria-label="Back to chats">←</button><div class="peer-avatar" id="peerAvatar">?</div><div class="peer-info"><strong id="peerUsername">@username</strong><span>Direct message</span></div><div class="header-wordmark">Sc<span class="brand-a">A</span>ry Net</div></header>
+        <header class="conversation-header"><button id="backButton" type="button" class="back-button" aria-label="Back to chats">←</button><div class="peer-avatar" id="peerAvatar">?</div><div class="peer-info"><strong id="peerUsername">@username</strong><span id="conversationSubtitle">Direct message</span></div><button id="groupInfoButton" type="button" class="group-info-button hidden" title="Group members and settings">Members</button><div class="header-wordmark">Sc<span class="brand-a">A</span>ry Net</div></header>
         <div id="messagesViewport" class="messages-viewport" role="log" aria-live="polite" aria-relevant="additions">
           <div class="messages-inner"><button id="loadOlder" type="button" class="load-older hidden">Load earlier messages ↑</button><div id="messagesList" class="messages-list"></div></div>
         </div>
@@ -153,6 +154,33 @@
         <p class="modal-caption">Changing your password signs out other devices.</p>
       </details>
       <p id="settingsFeedback" class="modal-feedback" role="status" aria-live="polite"></p>
+    </section>
+  </div>
+  <!-- Group chat controls; original authentication and personal settings unchanged. -->
+  <div id="newGroupScreen" class="modal-overlay hidden" role="dialog" aria-modal="true" aria-labelledby="newGroupTitle">
+    <section class="account-modal group-modal">
+      <div class="modal-heading"><h2 id="newGroupTitle">Create a group</h2><button id="closeNewGroup" type="button" class="modal-close" aria-label="Close">×</button></div>
+      <p class="modal-caption">Give your group a name and invite people using their exact usernames. You’ll be the admin.</p>
+      <form id="createGroupForm" class="account-form">
+        <label for="groupNameInput">GROUP NAME</label><input id="groupNameInput" maxlength="50" minlength="2" placeholder="Your group name" required />
+        <label for="groupMembersInput">MEMBER USERNAMES</label><textarea id="groupMembersInput" rows="3" placeholder="alex, sam, robin" required spellcheck="false" autocapitalize="none"></textarea>
+        <p class="modal-caption">Separate usernames with commas. Add 1–29 other people.</p>
+        <button class="primary-button" type="submit">Create group <span aria-hidden="true">→</span></button>
+      </form>
+      <p class="modal-feedback" id="createGroupFeedback" role="status" aria-live="polite"></p>
+    </section>
+  </div>
+  <div id="groupDetailsScreen" class="modal-overlay hidden" role="dialog" aria-modal="true" aria-labelledby="groupDetailsTitle">
+    <section class="account-modal group-modal">
+      <div class="modal-heading"><h2 id="groupDetailsTitle">Group members</h2><button id="closeGroupDetails" type="button" class="modal-close" aria-label="Close">×</button></div>
+      <p id="groupDetailsCaption" class="modal-caption"></p>
+      <div id="groupMemberList" class="group-member-list" aria-label="Group members"></div>
+      <form id="addGroupMemberForm" class="account-form hidden">
+        <label for="addGroupMemberName">ADD BY USERNAME</label>
+        <div class="group-add-row"><input id="addGroupMemberName" maxlength="20" placeholder="username" spellcheck="false" autocapitalize="none" required /><button type="submit" class="mini-button">Add</button></div>
+      </form>
+      <button id="leaveGroupButton" type="button" class="group-leave-button">Leave group</button>
+      <p id="groupDetailsFeedback" class="modal-feedback" role="status" aria-live="polite"></p>
     </section>
   </div>
   <div id="toast" class="toast" role="status" aria-live="polite"></div>

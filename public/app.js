@@ -2,7 +2,7 @@
 'use strict';
 const $ = id => document.getElementById(id);
 const state = {
-  user: null, mode: 'login', selected: null, chats: [], messages: [],
+  user: null, mode: 'login', selected: null, selectedGroup: null, chats: [], groups: [], messages: [],
   hasOlder: false, fetching: false, sending: false, loadingOlder: false, version: 0,
 };
 let messageTimer, chatTimer, toastTimer;
@@ -82,8 +82,12 @@ function showAuth() {
   clearInterval(chatTimer);
   state.user = null;
   state.selected = null;
+  state.selectedGroup = null;
   state.messages = [];
   state.chats = [];
+  state.groups = [];
+  $('newGroupScreen').classList.add('hidden');
+  $('groupDetailsScreen').classList.add('hidden');
   $('appShell').classList.add('hidden');
   $('appShell').classList.remove('chat-open');
   $('authScreen').classList.remove('hidden');
@@ -101,7 +105,7 @@ async function enterApp(user) {
   clearInterval(messageTimer);
   clearInterval(chatTimer);
   messageTimer = setInterval(() => {
-    if (!document.hidden && state.selected && (!isMobile() || $('appShell').classList.contains('chat-open'))) {
+    if (!document.hidden && (state.selected || state.selectedGroup) && (!isMobile() || $('appShell').classList.contains('chat-open'))) {
       pollMessages().catch(onBackgroundError);
     }
   }, 8000);
@@ -117,37 +121,44 @@ function onBackgroundError(error) {
 function renderChats() {
   const list = $('chatList');
   list.replaceChildren();
-  if (!state.chats.length) {
+  const all = [
+    ...state.chats.map(chat => ({ ...chat, kind: 'direct' })),
+    ...state.groups.map(group => ({ ...group, kind: 'group' }))
+  ].sort((a,b) => b.updatedAt - a.updatedAt);
+  if (!all.length) {
     const empty = document.createElement('div');
     empty.className = 'chat-list-empty';
-    empty.textContent = 'No chats yet. Tap + to find someone by username.';
+    empty.textContent = 'No chats yet. Start a conversation or create a group.';
     list.append(empty);
     return;
   }
-  for (const chat of state.chats) {
+  for (const chat of all) {
+    const isGroup = chat.kind === 'group';
     const button = document.createElement('button');
     button.type = 'button';
-    button.className = 'chat-item';
-    if (state.selected === chat.username) button.classList.add('selected');
-    button.setAttribute('aria-label', `Open chat with ${chat.username}`);
+    button.className = 'chat-item' + (isGroup ? ' group-chat' : '');
+    if (isGroup ? state.selectedGroup?.id === chat.id : state.selected === chat.username) button.classList.add('selected');
+    button.setAttribute('aria-label', isGroup ? `Open group ${chat.name}` : `Open chat with ${chat.username}`);
     const avatar = document.createElement('div');
     avatar.className = 'chat-avatar';
-    avatar.textContent = avatarLetter(chat.username);
+    avatar.textContent = isGroup ? '👥' : avatarLetter(chat.username);
     const body = document.createElement('div');
     body.className = 'chat-text';
     const heading = document.createElement('div');
     heading.className = 'chat-mainline';
     const title = document.createElement('strong');
-    title.textContent = '@' + chat.username;
+    title.textContent = isGroup ? chat.name : '@' + chat.username;
     const date = document.createElement('time');
     date.textContent = previewTime(chat.updatedAt);
     heading.append(title, date);
     const preview = document.createElement('p');
     preview.className = 'chat-preview';
-    preview.textContent = (chat.sentByMe ? 'You: ' : '') + chat.lastBody;
+    preview.textContent = isGroup
+      ? (chat.lastBody ? `${chat.sentByMe ? 'You' : '@' + (chat.lastSender || 'member')}: ${chat.lastBody}` : `Group · ${chat.memberCount} members`)
+      : (chat.sentByMe ? 'You: ' : '') + chat.lastBody;
     body.append(heading, preview);
     button.append(avatar, body);
-    button.addEventListener('click', () => openChat(chat.username));
+    button.addEventListener('click', () => isGroup ? openGroup(chat) : openChat(chat.username));
     list.append(button);
   }
 }
@@ -156,13 +167,35 @@ async function loadChats() {
   const data = await api('/api/chats');
   if (!state.user) return;
   state.chats = data.chats || [];
+  state.groups = data.groups || [];
+  if (state.selectedGroup) {
+    const current = state.groups.find(g => g.id === state.selectedGroup.id);
+    if (!current) { closeActiveConversation(); toast('You are no longer in this group.'); }
+    else {state.selectedGroup = { ...state.selectedGroup, ...current }; $('conversationSubtitle').textContent = `Group · ${current.memberCount} members`;}
+  }
   renderChats();
+}
+function closeActiveConversation() {
+  state.selected = null;
+  state.selectedGroup = null;
+  state.version++;
+  state.messages = [];
+  $('conversationPane').classList.add('hidden');
+  $('emptyPane').classList.remove('hidden');
+  $('appShell').classList.remove('chat-open');
+  $('groupInfoButton').classList.add('hidden');
+  $('groupDetailsScreen').classList.add('hidden');
+}
+function messageEndpoint() {
+  return state.selectedGroup ? `/api/groups/${encodeURIComponent(state.selectedGroup.id)}/messages`
+    : '/api/messages?username=' + encodeURIComponent(state.selected);
 }
 function showNewChat() {
   $('newChatForm').classList.remove('hidden');
   $('newChatUsername').focus();
 }
 function openChat(username) {
+  state.selectedGroup = null;
   state.selected = username;
   state.messages = [];
   state.hasOlder = false;
@@ -170,6 +203,32 @@ function openChat(username) {
   const v = state.version;
   $('peerUsername').textContent = '@' + username;
   $('peerAvatar').textContent = avatarLetter(username);
+  $('peerAvatar').classList.remove('group-peer-avatar');
+  $('conversationSubtitle').textContent = 'Direct message';
+  $('groupInfoButton').classList.add('hidden');
+  $('emptyPane').classList.add('hidden');
+  $('conversationPane').classList.remove('hidden');
+  $('appShell').classList.add('chat-open');
+  $('newChatForm').classList.add('hidden');
+  $('messageInput').value = '';
+  updateComposer();
+  renderChats();
+  renderMessages();
+  loadInitialMessages(v).catch(err => { if (v === state.version) toast(err.message); });
+  $('messageInput').focus();
+}
+function openGroup(group) {
+  state.selectedGroup = { ...group };
+  state.selected = null;
+  state.messages = [];
+  state.hasOlder = false;
+  state.version++;
+  const v = state.version;
+  $('peerUsername').textContent = group.name;
+  $('peerAvatar').textContent = '👥';
+  $('peerAvatar').classList.add('group-peer-avatar');
+  $('conversationSubtitle').textContent = `Group · ${group.memberCount} members`;
+  $('groupInfoButton').classList.remove('hidden');
   $('emptyPane').classList.add('hidden');
   $('conversationPane').classList.remove('hidden');
   $('appShell').classList.add('chat-open');
@@ -182,8 +241,7 @@ function openChat(username) {
   $('messageInput').focus();
 }
 async function loadInitialMessages(version) {
-  const name = state.selected;
-  const data = await api('/api/messages?username=' + encodeURIComponent(name));
+  const data = await api(messageEndpoint());
   if (version !== state.version) return;
   state.messages = data.messages || [];
   state.hasOlder = !!data.hasMore;
@@ -206,7 +264,8 @@ function renderMessages() {
     const empty = document.createElement('div');
     empty.className = 'no-messages';
     const icon = document.createElement('span'); icon.className = 'hello'; icon.textContent = '✳';
-    const title = document.createElement('strong'); title.textContent = `Say hello to @${state.selected || 'someone'}`;
+    const title = document.createElement('strong'); title.textContent = state.selectedGroup
+      ? `Say hello to ${state.selectedGroup.name}` : `Say hello to @${state.selected || 'someone'}`;
     const text = document.createElement('p'); text.textContent = 'Your conversation starts with a single message.';
     empty.append(icon, title, text);
     list.append(empty);
@@ -225,7 +284,13 @@ function renderMessages() {
     const row = document.createElement('div');
     row.className = 'message' + (msg.mine ? ' mine' : '');
     const bubble = document.createElement('div'); bubble.className = 'message-bubble';
-    bubble.textContent = msg.body;
+    if (state.selectedGroup && !msg.mine) {
+      const sender = document.createElement('span');
+      sender.className = 'group-message-sender';
+      sender.textContent = '@' + msg.sender;
+      bubble.append(sender);
+    }
+    bubble.append(document.createTextNode(msg.body));
     const time = document.createElement('time');
     time.className = 'message-time';
     time.dateTime = new Date(msg.createdAt).toISOString();
@@ -239,15 +304,14 @@ function scrollBottom() {
   requestAnimationFrame(() => { vp.scrollTop = vp.scrollHeight; });
 }
 async function pollMessages() {
-  if (!state.selected || state.fetching) return;
+  if ((!state.selected && !state.selectedGroup) || state.fetching) return;
   state.fetching = true;
   const version = state.version;
-  const name = state.selected;
   const last = state.messages.at(-1);
   try {
-    const query = new URLSearchParams({ username: name });
-    if (last) query.set('after', cursorOf(last));
-    const data = await api('/api/messages?' + query.toString());
+    const endpoint = messageEndpoint();
+    const join = endpoint.includes('?') ? '&' : '?';
+    const data = await api(last ? endpoint + join + 'after=' + encodeURIComponent(cursorOf(last)) : endpoint);
     if (version !== state.version) return;
     const known = new Set(state.messages.map(m => m.id));
     const incoming = (data.messages || []).filter(m => !known.has(m.id));
@@ -270,8 +334,9 @@ async function loadOlder() {
   const previousHeight = viewport.scrollHeight;
   const previousTop = viewport.scrollTop;
   try {
-    const query = new URLSearchParams({ username: state.selected, before: cursorOf(state.messages[0]) });
-    const data = await api('/api/messages?' + query.toString());
+    const endpoint = messageEndpoint();
+    const join = endpoint.includes('?') ? '&' : '?';
+    const data = await api(endpoint + join + 'before=' + encodeURIComponent(cursorOf(state.messages[0])));
     if (version !== state.version) return;
     const old = data.messages || [];
     const known = new Set(state.messages.map(m => m.id));
@@ -292,16 +357,18 @@ function updateComposer() {
 }
 async function sendMessage(event) {
   event.preventDefault();
-  if (!state.selected || state.sending) return;
+  if ((!state.selected && !state.selectedGroup) || state.sending) return;
   const text = $('messageInput').value.trim();
   if (!text) return;
   if (Array.from(text).length > 1000) { toast('Please keep messages under 1000 characters.'); return; }
-  const name = state.selected, version = state.version;
+  const name = state.selected, group = state.selectedGroup, version = state.version;
   state.sending = true;
   updateComposer();
   try {
-    const data = await api('/api/send', { method: 'POST', body: { to: name, text } });
-    if (state.selected === name && version === state.version) {
+    const data = group
+      ? await api(`/api/groups/${encodeURIComponent(group.id)}/messages`, { method: 'POST', body: { text } })
+      : await api('/api/send', { method: 'POST', body: { to: name, text } });
+    if (version === state.version) {
       const known = state.messages.some(msg => msg.id === data.message.id);
       if (!known) state.messages.push(data.message);
       state.messages.sort((a,b) => a.createdAt - b.createdAt || a.id.localeCompare(b.id));
@@ -314,6 +381,96 @@ async function sendMessage(event) {
   finally { state.sending = false; updateComposer(); }
 }
 
+
+// Group creation and members. The original direct-message flow remains intact.
+function groupFeedback(id, text, error = false) { feedback(id, text, error); }
+function openNewGroup() {
+  $('newGroupScreen').classList.remove('hidden');
+  groupFeedback('createGroupFeedback', '');
+  $('groupNameInput').focus();
+}
+function closeNewGroup() { $('newGroupScreen').classList.add('hidden'); }
+function closeGroupDetails() { $('groupDetailsScreen').classList.add('hidden'); }
+async function refreshGroupDetails() {
+  if (!state.selectedGroup) return;
+  const groupId = state.selectedGroup.id;
+  const data = await api(`/api/groups/${encodeURIComponent(groupId)}/info`);
+  if (!state.selectedGroup || state.selectedGroup.id !== groupId) return;
+  const group = data.group;
+  $('groupDetailsTitle').textContent = group.name;
+  $('groupDetailsCaption').textContent = `${group.members.length} members · ${group.isAdmin ? 'You are the admin' : 'Only admins can add or remove members'}`;
+  $('addGroupMemberForm').classList.toggle('hidden', !group.isAdmin || group.members.length >= 30);
+  const memberList = $('groupMemberList');
+  memberList.replaceChildren();
+  for (const member of group.members) {
+    const row = document.createElement('div'); row.className = 'group-member';
+    const name = document.createElement('span'); name.className = 'member-label'; name.textContent = '@' + member.username;
+    const role = document.createElement('span'); role.className = 'member-role'; role.textContent = member.role === 'admin' ? 'Admin' : '';
+    row.append(name, role);
+    if (group.isAdmin && member.username !== state.user.username) {
+      const remove = document.createElement('button'); remove.type = 'button'; remove.className = 'remove-member'; remove.textContent = 'Remove';
+      remove.addEventListener('click', async () => {
+        if (!confirm(`Remove @${member.username} from this group?`)) return;
+        remove.disabled = true;
+        groupFeedback('groupDetailsFeedback', '');
+        try {
+          await api(`/api/groups/${encodeURIComponent(groupId)}/members`, { method:'POST', body:{ action:'remove', username:member.username } });
+          await Promise.all([refreshGroupDetails(), loadChats()]);
+          toast(`Removed @${member.username}`);
+        } catch(err) { groupFeedback('groupDetailsFeedback', err.message, true); remove.disabled = false; }
+      });
+      row.append(remove);
+    }
+    memberList.append(row);
+  }
+}
+$('createGroupButton').addEventListener('click', openNewGroup);
+$('closeNewGroup').addEventListener('click', closeNewGroup);
+$('closeGroupDetails').addEventListener('click', closeGroupDetails);
+$('newGroupScreen').addEventListener('click', e => { if (e.target === $('newGroupScreen')) closeNewGroup(); });
+$('groupDetailsScreen').addEventListener('click', e => { if (e.target === $('groupDetailsScreen')) closeGroupDetails(); });
+$('createGroupForm').addEventListener('submit', event => {
+  event.preventDefault();
+  withForm('createGroupForm', 'createGroupFeedback', async () => {
+    const name = $('groupNameInput').value.trim();
+    const members = $('groupMembersInput').value.split(',').map(v => normalName(v)).filter(Boolean);
+    const data = await api('/api/groups', {method:'POST', body:{name,members}});
+    $('groupNameInput').value = '';
+    $('groupMembersInput').value = '';
+    closeNewGroup();
+    await loadChats();
+    openGroup(data.group);
+    toast('Group created!');
+  });
+});
+$('groupInfoButton').addEventListener('click', async () => {
+  $('groupDetailsScreen').classList.remove('hidden');
+  groupFeedback('groupDetailsFeedback', '');
+  try { await refreshGroupDetails(); } catch(err) {groupFeedback('groupDetailsFeedback', err.message, true);}
+});
+$('addGroupMemberForm').addEventListener('submit', event => {
+  event.preventDefault();
+  withForm('addGroupMemberForm', 'groupDetailsFeedback', async () => {
+    if (!state.selectedGroup) throw new Error('Select a group first.');
+    const name = normalName($('addGroupMemberName').value);
+    await api(`/api/groups/${encodeURIComponent(state.selectedGroup.id)}/members`, {method:'POST',body:{action:'add',username:name}});
+    $('addGroupMemberName').value = '';
+    await Promise.all([refreshGroupDetails(), loadChats()]);
+    toast(`Added @${name}`);
+  });
+});
+$('leaveGroupButton').addEventListener('click', async () => {
+  if (!state.selectedGroup || !confirm('Leave this group? You will no longer see its messages.')) return;
+  $('leaveGroupButton').disabled = true;
+  groupFeedback('groupDetailsFeedback', '');
+  try {
+    await api(`/api/groups/${encodeURIComponent(state.selectedGroup.id)}/members`, {method:'POST',body:{action:'leave'});
+    closeActiveConversation();
+    await loadChats();
+    toast('You left the group.');
+  } catch(err) { groupFeedback('groupDetailsFeedback', err.message, true); }
+  finally { $('leaveGroupButton').disabled = false; }
+});
 
 // Email recovery and self-service account changes. Password proofs are derived on-device.
 let recoveryTicket = null;
@@ -370,7 +527,7 @@ $('settingsButton').addEventListener('click',()=>openSettings());
 $('closeSettings').addEventListener('click',closeSettings);
 $('recoveryScreen').addEventListener('click', event=>{if(event.target===$('recoveryScreen')) closeRecovery();});
 $('settingsScreen').addEventListener('click', event=>{if(event.target===$('settingsScreen')) closeSettings();});
-document.addEventListener('keydown',event=>{if(event.key==='Escape'){closeRecovery();closeSettings();}});
+document.addEventListener('keydown',event=>{if(event.key==='Escape'){closeRecovery();closeSettings();closeNewGroup();closeGroupDetails();}});
 $('updatedUsername').addEventListener('input',event=>{event.target.value=event.target.value.toLowerCase();});
 $('recoveryRequestForm').addEventListener('submit',event=>{
   event.preventDefault();
@@ -556,7 +713,7 @@ $('loadOlder').addEventListener('click', loadOlder);
 document.addEventListener('visibilitychange', () => {
   if (!document.hidden && state.user) {
     loadChats().catch(onBackgroundError);
-    if (state.selected) pollMessages().catch(onBackgroundError);
+    if (state.selected || state.selectedGroup) pollMessages().catch(onBackgroundError);
   }
 });
 (async () => {
