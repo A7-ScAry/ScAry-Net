@@ -464,7 +464,7 @@ $('leaveGroupButton').addEventListener('click', async () => {
   $('leaveGroupButton').disabled = true;
   groupFeedback('groupDetailsFeedback', '');
   try {
-    await api(`/api/groups/${encodeURIComponent(state.selectedGroup.id)}/members`, {method:'POST',body:{action:'leave'});
+    await api(`/api/groups/${encodeURIComponent(state.selectedGroup.id)}/members`, {method:'POST',body:{action:'leave'}});
     closeActiveConversation();
     await loadChats();
     toast('You left the group.');
